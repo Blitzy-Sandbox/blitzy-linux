@@ -46,7 +46,7 @@ readonly TAB=$'\t'
 log() {
 	local level="$1"
 	shift
-	echo "[$CORR_ID] [$level] $*" >&2
+	echo "[$CORR_ID] [$(date -u +%Y-%m-%dT%H:%M:%SZ)] [$level] $*" >&2
 }
 
 # ===========================================================================
@@ -298,7 +298,7 @@ log "INFO" "Found $unique_authors unique authors across $total_commits total com
 # ===========================================================================
 log "INFO" "Phase 2: Generating authors table (sorted by commit count descending)"
 
-echo -e "author\temail\tcommit_count\tfirst_date\tlast_date\tcomponents"
+printf '%s\t%s\t%s\t%s\t%s\t%s\n' "author" "email" "commit_count" "first_date" "last_date" "components"
 
 # Build sortable lines: commit_count<TAB>author_name<TAB>email<TAB>count<TAB>first<TAB>last<TAB>comps
 declare -a author_lines=()
@@ -356,7 +356,7 @@ log "INFO" "Phase 4: Extracting chronological milestones"
 # Section separator
 echo "---"
 
-echo -e "date\tmilestone_name\tcommit_hash\tauthor\tdescription"
+printf '%s\t%s\t%s\t%s\t%s\n' "date" "milestone_name" "commit_hash" "author" "description"
 
 milestone_count=0
 declare -a milestone_rows=()

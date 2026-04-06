@@ -49,7 +49,7 @@ readonly TAB=$'\t'
 log() {
 	local level="$1"
 	shift
-	echo "[$CORR_ID] [$level] $*" >&2
+	echo "[$CORR_ID] [$(date -u +%Y-%m-%dT%H:%M:%SZ)] [$level] $*" >&2
 }
 
 # ===========================================================================
@@ -106,7 +106,7 @@ count_incomplete=0
 # ===========================================================================
 # Print TSV header
 # ===========================================================================
-echo -e "bottleneck_type\tclassification\tevidence_hash\tevidence_detail\tdate_range"
+printf '%s\t%s\t%s\t%s\t%s\n' "bottleneck_type" "classification" "evidence_hash" "evidence_detail" "date_range"
 
 # ===========================================================================
 # Helper: convert ISO 8601 date to epoch seconds via GNU date -d
@@ -192,7 +192,7 @@ while IFS="${TAB}" read -r epoch iso_date commit_hash; do
 		# We document the gap and evidence without inferring causation.
 		classification="deferred"
 
-		echo -e "INACTIVITY\t${classification}\t${prev_hash}\tGap of ${gap_days} days between ${short_before} and ${short_after}\t${short_before} to ${short_after}"
+		printf '%s\t%s\t%s\t%s\t%s\n' "INACTIVITY" "$classification" "$prev_hash" "Gap of ${gap_days} days between ${short_before} and ${short_after}" "${short_before} to ${short_after}"
 		count_inactivity=$(( count_inactivity + 1 ))
 	fi
 
@@ -256,7 +256,7 @@ while IFS="${TAB}" read -r rev_hash rev_date rev_subject; do
 	classification="contested"
 
 	detail="Reverts ${original_hash}: ${rev_subject}"
-	echo -e "REVERT\t${classification}\t${rev_hash}\t${detail}\t${short_date}"
+	printf '%s\t%s\t%s\t%s\t%s\n' "REVERT" "$classification" "$rev_hash" "$detail" "$short_date"
 	count_revert=$(( count_revert + 1 ))
 done < "${tmpdir}/reverts_all.tsv"
 
@@ -338,7 +338,7 @@ while IFS=: read -r mfile mline mtext; do
 		fi
 
 		detail="${pattern} at ${mfile}:${mline} persisted across ${commits_since} commits since introduction"
-		echo -e "PERSISTENT_MARKER\tdeferred\t${intro_hash}\t${detail}\t${intro_date_short} to current"
+		printf '%s\t%s\t%s\t%s\t%s\n' "PERSISTENT_MARKER" "deferred" "$intro_hash" "$detail" "${intro_date_short} to current"
 		count_persistent=$(( count_persistent + 1 ))
 	fi
 done < "${tmpdir}/markers.txt"
@@ -365,7 +365,7 @@ if [[ -n "$kvm_evidence_line" ]]; then
 		kernel/ drivers/ 2>/dev/null || true; } | wc -l )"
 	kvm_handler_count="$(echo "$kvm_handler_count" | tr -d '[:space:]')"
 	if [[ "$kvm_handler_count" -eq 0 ]]; then
-		echo -e "INCOMPLETE\tdeferred\tN/A\tKVM integration: luo_core.c:${kvm_evidence_line} lists kvm as example subsystem but no KVM file handler registered\t-"
+		printf '%s\t%s\t%s\t%s\t%s\n' "INCOMPLETE" "deferred" "N/A" "KVM integration: luo_core.c:${kvm_evidence_line} lists kvm as example subsystem but no KVM file handler registered" "-"
 		count_incomplete=$(( count_incomplete + 1 ))
 	fi
 fi
@@ -386,7 +386,7 @@ if [[ -n "$vfio_evidence_line" ]]; then
 		kernel/ drivers/ 2>/dev/null || true; } | wc -l )"
 	iommufd_handler_count="$(echo "$iommufd_handler_count" | tr -d '[:space:]')"
 	if [[ "$vfio_handler_count" -eq 0 && "$iommufd_handler_count" -eq 0 ]]; then
-		echo -e "INCOMPLETE\tdeferred\tN/A\tDevice driver handlers: luo_file.c:${vfio_evidence_line} mentions vfio and iommufd but only memfd handler exists\t-"
+		printf '%s\t%s\t%s\t%s\t%s\n' "INCOMPLETE" "deferred" "N/A" "Device driver handlers: luo_file.c:${vfio_evidence_line} mentions vfio and iommufd but only memfd handler exists" "-"
 		count_incomplete=$(( count_incomplete + 1 ))
 	fi
 fi
@@ -402,7 +402,7 @@ if [[ -n "$iommu_evidence_line" ]]; then
 		drivers/iommu/ 2>/dev/null || true; } | wc -l )"
 	iommu_handler_count="$(echo "$iommu_handler_count" | tr -d '[:space:]')"
 	if [[ "$iommu_handler_count" -eq 0 ]]; then
-		echo -e "INCOMPLETE\tdeferred\tN/A\tIOMMU integration: luo_core.c:${iommu_evidence_line} lists iommu as example subsystem but no IOMMU handler registered\t-"
+		printf '%s\t%s\t%s\t%s\t%s\n' "INCOMPLETE" "deferred" "N/A" "IOMMU integration: luo_core.c:${iommu_evidence_line} lists iommu as example subsystem but no IOMMU handler registered" "-"
 		count_incomplete=$(( count_incomplete + 1 ))
 	fi
 fi
@@ -418,7 +418,7 @@ if [[ -n "$irq_evidence_line" ]]; then
 		kernel/irq/ 2>/dev/null || true; } | wc -l )"
 	irq_handler_count="$(echo "$irq_handler_count" | tr -d '[:space:]')"
 	if [[ "$irq_handler_count" -eq 0 ]]; then
-		echo -e "INCOMPLETE\tdeferred\tN/A\tInterrupt integration: luo_core.c:${irq_evidence_line} lists interrupts as example subsystem but no interrupt handler registered\t-"
+		printf '%s\t%s\t%s\t%s\t%s\n' "INCOMPLETE" "deferred" "N/A" "Interrupt integration: luo_core.c:${irq_evidence_line} lists interrupts as example subsystem but no interrupt handler registered" "-"
 		count_incomplete=$(( count_incomplete + 1 ))
 	fi
 fi
@@ -429,7 +429,7 @@ fixme_line=""
 fixme_line="$( { grep -n "FIXME.*node hot-plug" kernel/liveupdate/kexec_handover.c 2>/dev/null || true; } \
 	| head -1 | cut -d: -f1 )"
 if [[ -n "$fixme_line" ]]; then
-	echo -e "INCOMPLETE\tdeferred\tN/A\tNUMA hot-plug: kexec_handover.c:${fixme_line} FIXME for node hot-plug/remove handling not implemented\t-"
+	printf '%s\t%s\t%s\t%s\t%s\n' "INCOMPLETE" "deferred" "N/A" "NUMA hot-plug: kexec_handover.c:${fixme_line} FIXME for node hot-plug/remove handling not implemented" "-"
 	count_incomplete=$(( count_incomplete + 1 ))
 fi
 
@@ -444,7 +444,7 @@ if [[ "$arch_count" -le 2 ]]; then
 		| grep "Kconfig" \
 		| sed 's|arch/||; s|/Kconfig||' \
 		| tr '\n' ',' | sed 's/,$//' )"
-	echo -e "INCOMPLETE\tdeferred\tN/A\tMulti-architecture support: ARCH_SUPPORTS_KEXEC_HANDOVER defined only in ${arch_list} (${arch_count} arch(es))\t-"
+	printf '%s\t%s\t%s\t%s\t%s\n' "INCOMPLETE" "deferred" "N/A" "Multi-architecture support: ARCH_SUPPORTS_KEXEC_HANDOVER defined only in ${arch_list} (${arch_count} arch(es))" "-"
 	count_incomplete=$(( count_incomplete + 1 ))
 fi
 
@@ -458,7 +458,7 @@ if [[ -n "$fs_evidence_line" ]]; then
 		| wc -l )"
 	fs_handler_count="$(echo "$fs_handler_count" | tr -d '[:space:]')"
 	if [[ "$fs_handler_count" -eq 0 ]]; then
-		echo -e "INCOMPLETE\tdeferred\tN/A\tFilesystem integration: luo_core.c:${fs_evidence_line} mentions participating filesystems but no FS handler registered\t-"
+		printf '%s\t%s\t%s\t%s\t%s\n' "INCOMPLETE" "deferred" "N/A" "Filesystem integration: luo_core.c:${fs_evidence_line} mentions participating filesystems but no FS handler registered" "-"
 		count_incomplete=$(( count_incomplete + 1 ))
 	fi
 fi
@@ -469,7 +469,7 @@ memblock_todo_line=""
 memblock_todo_line="$( { grep -n "TODO.*Allocation must be outside of scratch" mm/memblock.c 2>/dev/null || true; } \
 	| head -1 | cut -d: -f1 )"
 if [[ -n "$memblock_todo_line" ]]; then
-	echo -e "INCOMPLETE\tdeferred\tN/A\tMemblock scratch constraint: mm/memblock.c:${memblock_todo_line} TODO for allocation outside scratch region\t-"
+	printf '%s\t%s\t%s\t%s\t%s\n' "INCOMPLETE" "deferred" "N/A" "Memblock scratch constraint: mm/memblock.c:${memblock_todo_line} TODO for allocation outside scratch region" "-"
 	count_incomplete=$(( count_incomplete + 1 ))
 fi
 

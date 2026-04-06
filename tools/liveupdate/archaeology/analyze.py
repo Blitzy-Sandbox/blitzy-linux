@@ -96,8 +96,9 @@ def run_script(script_name, directive_num):
     try:
         result = subprocess.run(
             ["bash", script_path],
-            capture_output=True,
-            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
             cwd=str(REPO_ROOT),
             timeout=600,
         )
@@ -344,7 +345,7 @@ def parse_bugs(output):
             continue
         if row[0] in ("RESOLVED", "REMAINING", "DEFENSIVE"):
             tag = row[0]
-        elif row[0] in ("bottleneck_type", "commit_hash"):
+        elif row[0] in ("commit_hash",):
             continue
         else:
             tag = None
@@ -1288,10 +1289,12 @@ def assemble_document(manifest_data, authorship_data, milestones_data,
     log(cid, "INFO",
         f"Mermaid diagrams: {mermaid_count} (min {MIN_MERMAID_DIAGRAMS}) "
         f"— {'PASS' if pass_mermaid else 'FAIL'}")
+    pass_milestones = milestone_count >= MIN_MILESTONES
     log(cid, "INFO",
-        f"Milestone references: {milestone_count} (min {MIN_MILESTONES})")
+        f"Milestone references: {milestone_count} (min {MIN_MILESTONES}) "
+        f"— {'PASS' if pass_milestones else 'FAIL'}")
 
-    pass_status = pass_word and pass_mermaid
+    pass_status = pass_word and pass_mermaid and pass_milestones
 
     # Write output
     os.makedirs(str(OUTPUT_DIR), exist_ok=True)

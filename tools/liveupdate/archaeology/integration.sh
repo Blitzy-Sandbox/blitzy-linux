@@ -61,7 +61,7 @@ emit_tsv() {
 	local file_evidence="$3"
 	local line_evidence="$4"
 	local notes="$5"
-	echo -e "${integration_point}\t${status}\t${file_evidence}\t${line_evidence}\t${notes}"
+	printf '%s\t%s\t%s\t%s\t%s\n' "$integration_point" "$status" "$file_evidence" "$line_evidence" "$notes"
 }
 
 # ---------------------------------------------------------------------------
@@ -94,7 +94,7 @@ record_status() {
 # ---------------------------------------------------------------------------
 # TSV header
 # ---------------------------------------------------------------------------
-echo -e "integration_point\tstatus\tfile_evidence\tline_evidence\tnotes"
+printf '%s\t%s\t%s\t%s\t%s\n' "integration_point" "status" "file_evidence" "line_evidence" "notes"
 
 # ===========================================================================
 # Integration Point 1: KVM
@@ -197,6 +197,7 @@ memblock_status="absent"
 memblock_file="-"
 memblock_line="-"
 memblock_notes=""
+kho_ref_count=0
 
 if [ -f "mm/memblock.c" ]; then
 	kho_ref_count=$(grep -c \
