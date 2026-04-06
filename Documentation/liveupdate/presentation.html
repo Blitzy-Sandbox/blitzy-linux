@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<!--
+  Linux Kernel Live Update Subsystem: Development Archaeology
+  Executive Presentation — Feature F-017
+  Kernel v7.0.0-rc3 "Baby Opossum Posse"
+
+  This is a self-contained reveal.js presentation artifact summarizing
+  the archaeological analysis findings of the Linux kernel Live Update
+  subsystem. All factual claims trace to specific commit hashes or
+  file:line references from the repository.
+
+  SPDX-License-Identifier: GPL-2.0
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Linux Kernel Live Update: Development Archaeology — F-017</title>
+
+  <!-- reveal.js 4.x from CDN -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4/dist/reset.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4/dist/reveal.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4/dist/theme/black.css">
+
+  <style>
+    /* ── Custom presentation styling ── */
+
+    :root {
+      --kernel-gold: #FFD700;
+      --kernel-amber: #FFA500;
+      --status-green: #28a745;
+      --status-yellow: #ffc107;
+      --status-red: #dc3545;
+      --text-muted: #adb5bd;
+      --bg-card: rgba(255, 255, 255, 0.06);
+      --border-subtle: rgba(255, 215, 0, 0.3);
+    }
+
+    .reveal {
+      font-size: 28px;
+    }
+
+    .reveal h1, .reveal h2, .reveal h3 {
+      text-transform: none;
+      font-weight: 700;
+    }
+
+    .reveal h1 {
+      color: var(--kernel-gold);
+      font-size: 1.8em;
+    }
+
+    .reveal h2 {
+      color: var(--kernel-gold);
+      font-size: 1.4em;
+      margin-bottom: 0.5em;
+    }
+
+    .reveal h3 {
+      color: var(--kernel-amber);
+      font-size: 1.1em;
+    }
+
+    .reveal .subtitle {
+      color: var(--text-muted);
+      font-size: 0.7em;
+      margin-top: 0.3em;
+    }
+
+    .reveal .slide-note {
+      color: var(--text-muted);
+      font-size: 0.55em;
+      margin-top: 1em;
+      font-style: italic;
+    }
+
+    /* ── Metric cards layout ── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.6em;
+      margin-top: 0.5em;
+    }
+
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 0.6em 0.5em;
+      text-align: center;
+    }
+
+    .metric-card .value {
+      font-size: 1.6em;
+      font-weight: 700;
+      color: var(--kernel-gold);
+      display: block;
+    }
+
+    .metric-card .label {
+      font-size: 0.6em;
+      color: var(--text-muted);
+      display: block;
+      margin-top: 0.15em;
+    }
+
+    /* ── Styled tables ── */
+    .reveal table.matrix {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.6em;
+      margin-top: 0.4em;
+    }
+
+    .reveal table.matrix th {
+      background: rgba(255, 215, 0, 0.15);
+      color: var(--kernel-gold);
+      padding: 0.5em 0.6em;
+      text-align: left;
+      border-bottom: 2px solid var(--kernel-gold);
+      font-weight: 600;
+    }
+
+    .reveal table.matrix td {
+      padding: 0.4em 0.6em;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      vertical-align: top;
+    }
+
+    .reveal table.matrix tr:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    /* ── Status badges ── */
+    .badge {
+      display: inline-block;
+      padding: 0.15em 0.5em;
+      border-radius: 4px;
+      font-size: 0.85em;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .badge-implemented {
+      background: var(--status-green);
+      color: #fff;
+    }
+
+    .badge-absent {
+      background: var(--status-red);
+      color: #fff;
+    }
+
+    .badge-stubbed {
+      background: var(--status-yellow);
+      color: #1a1a2e;
+    }
+
+    /* ── Risk severity indicators ── */
+    .risk-high {
+      color: var(--status-red);
+      font-weight: 700;
+    }
+
+    .risk-medium {
+      color: var(--status-yellow);
+      font-weight: 700;
+    }
+
+    .risk-low {
+      color: var(--status-green);
+      font-weight: 700;
+    }
+
+    .reveal table.risk-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.6em;
+      margin-top: 0.4em;
+    }
+
+    .reveal table.risk-table th {
+      background: rgba(220, 53, 69, 0.15);
+      color: var(--status-red);
+      padding: 0.5em 0.6em;
+      text-align: left;
+      border-bottom: 2px solid var(--status-red);
+      font-weight: 600;
+    }
+
+    .reveal table.risk-table td {
+      padding: 0.45em 0.6em;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      vertical-align: top;
+    }
+
+    /* ── Mermaid diagram sizing ── */
+    .mermaid {
+      font-size: 14px;
+    }
+
+    .mermaid svg {
+      max-height: 420px;
+      max-width: 100%;
+    }
+
+    /* ── Decision grid ── */
+    .decision-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5em;
+      margin-top: 0.4em;
+      font-size: 0.6em;
+    }
+
+    .decision-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 0.6em;
+      text-align: left;
+    }
+
+    .decision-card .decision-title {
+      color: var(--kernel-gold);
+      font-weight: 700;
+      font-size: 1.05em;
+      margin-bottom: 0.3em;
+    }
+
+    .decision-card .decision-chosen {
+      color: var(--status-green);
+      font-weight: 600;
+    }
+
+    .decision-card .decision-over {
+      color: var(--text-muted);
+      font-size: 0.9em;
+    }
+
+    /* ── Footer attribution ── */
+    .slide-footer {
+      position: absolute;
+      bottom: 0.5em;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      font-size: 0.4em;
+      color: rgba(255, 255, 255, 0.3);
+    }
+
+    /* ── Title page decorative styling ── */
+    .title-visual {
+      margin-top: 0.8em;
+    }
+  </style>
+</head>
+<body>
+
+<div class="reveal">
+<div class="slides">
+
+<!-- ════════════════════════════════════════════════════════════════════
+     SLIDE 1 — Title
+     ════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h1>Linux Kernel Live Update Subsystem</h1>
+  <h3>Development Archaeology</h3>
+  <p class="subtitle">
+    Feature F-017 &mdash; Kernel v7.0.0-rc3 &ldquo;Baby Opossum Posse&rdquo;
+  </p>
+  <div class="title-visual">
+    <div class="mermaid">
+    graph LR
+      A["&#x1F50D; Archaeology"]:::gold --> B["55 Commits"]:::cyan
+      B --> C["15 Authors"]:::cyan
+      C --> D["4,811 Lines"]:::cyan
+      D --> E["&#x1F4C4; Narrative"]:::gold
+      classDef gold fill:#FFD700,stroke:#FFD700,color:#1a1a2e
+      classDef cyan fill:#17a2b8,stroke:#17a2b8,color:#fff
+    </div>
+  </div>
+  <p class="slide-note">
+    Archaeological analysis derived entirely from in-tree commit history and source code.
+  </p>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     SLIDE 2 — Executive Summary
+     ════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Executive Summary</h2>
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <span class="value">55</span>
+      <span class="label">Commits in kernel/liveupdate/</span>
+    </div>
+    <div class="metric-card">
+      <span class="value">15+</span>
+      <span class="label">Unique Contributors</span>
+    </div>
+    <div class="metric-card">
+      <span class="value">4,811</span>
+      <span class="label">Lines of Core Code</span>
+    </div>
+    <div class="metric-card">
+      <span class="value">3</span>
+      <span class="label">Vendor Organizations</span>
+    </div>
+    <div class="metric-card">
+      <span class="value">May 2025</span>
+      <span class="label">First KHO Commit</span>
+    </div>
+    <div class="metric-card">
+      <span class="value">Feb 2026</span>
+      <span class="label">Current HEAD</span>
+    </div>
+  </div>
+  <table class="matrix" style="margin-top:0.7em; font-size:0.55em;">
+    <tr>
+      <th>Organization</th><th>Key Contributors</th><th>Primary Role</th>
+    </tr>
+    <tr>
+      <td style="color:var(--kernel-gold);">Google LLC / Soleen</td>
+      <td>Pasha Tatashin (26 commits), Pratyush Yadav, Changyuan Lyu, Jason Miu</td>
+      <td>LUO architect, sessions, file handlers, memfd</td>
+    </tr>
+    <tr>
+      <td style="color:var(--kernel-gold);">Microsoft Corporation</td>
+      <td>Mike Rapoport (8 commits)</td>
+      <td>KHO infrastructure, memory preservation API</td>
+    </tr>
+    <tr>
+      <td style="color:var(--kernel-gold);">Amazon</td>
+      <td>Alexander Graf (2 commits, original copyright 2023)</td>
+      <td>Original KHO concept and generation helpers</td>
+    </tr>
+  </table>
+  <p class="slide-note">
+    Status: <strong style="color:var(--status-yellow);">In Development</strong> &mdash; not yet a stable/complete feature.<br>
+    Evidence: kernel/liveupdate/Kconfig, git&nbsp;log&nbsp;--all&nbsp;--&nbsp;kernel/liveupdate/
+  </p>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     SLIDE 3 — Feature Overview (Architecture Diagram)
+     ════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Feature Overview &mdash; Architecture</h2>
+  <div class="mermaid">
+  graph TB
+    subgraph LUO["Live Update Orchestrator"]
+      LUO_CORE["luo_core.c<br/>/dev/liveupdate<br/>(452 lines)"]
+      LUO_SESSION["luo_session.c<br/>Named Sessions<br/>(646 lines)"]
+      LUO_FILE["luo_file.c<br/>FD Preservation<br/>(926 lines)"]
+      LUO_FLB["luo_flb.c<br/>File-Lifecycle-Bound<br/>(654 lines)"]
+    end
+    subgraph KHO["Kexec HandOver"]
+      KHO_CORE["kexec_handover.c<br/>Memory Preservation<br/>(1610 lines)"]
+      KHO_FDT["FDT Serialization<br/>(LIBFDT)"]
+      KHO_SCRATCH["Scratch Regions<br/>(CMA-backed)"]
+    end
+    subgraph INT["Integrations"]
+      MEMFD["mm/memfd_luo.c<br/>(523 lines)"]
+      MEMBLOCK["mm/memblock.c"]
+      X86["arch/x86/<br/>(6 files)"]
+      EFI["drivers/firmware/efi"]
+    end
+    LUO_CORE --> LUO_SESSION
+    LUO_SESSION --> LUO_FILE
+    LUO_FILE --> LUO_FLB
+    LUO_CORE --> KHO_CORE
+    KHO_CORE --> KHO_FDT
+    KHO_CORE --> KHO_SCRATCH
+    LUO_FILE --> MEMFD
+    KHO_CORE --> MEMBLOCK
+    KHO_CORE --> X86
+    KHO_CORE --> EFI
+  </div>
+  <p class="slide-note">
+    The LUO orchestrates kexec-based kernel replacement while KHO preserves memory state via FDT metadata.<br>
+    Source: kernel/liveupdate/Kconfig (LIVEUPDATE depends on KEXEC_HANDOVER; KHO selects LIBFDT, CMA)
+  </p>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     SLIDE 4 — Authorship & Timeline
+     ════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Authorship &amp; Development Timeline</h2>
+  <div class="mermaid">
+  gantt
+    title Live Update Subsystem Development Timeline
+    dateFormat YYYY-MM-DD
+    axisFormat %b %Y
+    section KHO Foundation
+    KHO Generation Helpers — Alexander Graf         :done, kho1, 2025-05-09, 1d
+    KHO Parsing + Memory Preservation — Rapoport    :done, kho2, 2025-05-09, 1d
+    section Evolution
+    is_kho_boot introduced — Petrongonas            :done, evo1, 2025-08-21, 1d
+    vmalloc preservation + page API rework          :done, evo2, 2025-09-21, 1d
+    section LUO Integration
+    KHO moved to kernel/liveupdate — Tatashin       :done, luo1, 2025-11-01, 1d
+    LUO core, sessions, files, FLB — Tatashin       :done, luo2, 2025-11-25, 14d
+    Memfd preservation handler — Yadav              :done, luo3, 2025-12-01, 30d
+    section Current
+    Bug fixes, cleanups to HEAD                     :active, cur1, 2026-01-01, 2026-02-16
+  </div>
+  <p class="slide-note">
+    Primary architect: Pasha Tatashin (Google/Soleen) — 26 commits. Original KHO concept: Alexander Graf (Amazon, copyright 2023).<br>
+    Evidence: git log --all --reverse -- include/linux/kexec_handover.h (first commit 3dc92c311498, 2025-05-09);<br>
+    git log --all --reverse -- kernel/liveupdate/ (first commit 48a1b2321d76, 2025-11-01)
+  </p>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     SLIDE 5 — Design Decisions
+     ════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Key Design Decisions</h2>
+  <div class="decision-grid">
+    <div class="decision-card">
+      <div class="decision-title">1. Serialization Format</div>
+      <div class="decision-chosen">Chosen: Flattened Device Tree (FDT)</div>
+      <div class="decision-over">Over: protobuf, custom binary, sysfs</div>
+      <p style="font-size:0.9em; margin-top:0.3em;">
+        FDT is existing kernel infrastructure; KHO selects LIBFDT in Kconfig.
+        Enables hierarchical metadata with zero new dependencies.
+      </p>
+      <p style="font-size:0.75em; color:var(--text-muted);">
+        Ref: kernel/liveupdate/Kconfig:12 (select&nbsp;LIBFDT)
+      </p>
+    </div>
+    <div class="decision-card">
+      <div class="decision-title">2. Subsystem Integration Model</div>
+      <div class="decision-chosen">Chosen: Callback Registration</div>
+      <div class="decision-over">Over: centralized orchestrator</div>
+      <p style="font-size:0.9em; margin-top:0.3em;">
+        Each subsystem registers its own file handler with
+        preserve/freeze/retrieve/finish callbacks, ensuring
+        subsystem autonomy.
+      </p>
+      <p style="font-size:0.75em; color:var(--text-muted);">
+        Ref: include/linux/liveupdate.h (struct&nbsp;liveupdate_file_ops)
+      </p>
+    </div>
+    <div class="decision-card">
+      <div class="decision-title">3. Failure Recovery</div>
+      <div class="decision-chosen">Chosen: Session-Scoped Cleanup</div>
+      <div class="decision-over">Over: full rollback / partial recovery</div>
+      <p style="font-size:0.9em; margin-top:0.3em;">
+        Partial deserialization failures are intentionally leaked;
+        recovery expectation is a full reboot. Simplifies error paths.
+      </p>
+      <p style="font-size:0.75em; color:var(--text-muted);">
+        Ref: luo_session.c, luo_file.c (explicit comments on leak-by-design)
+      </p>
+    </div>
+    <div class="decision-card">
+      <div class="decision-title">4. FD Preservation</div>
+      <div class="decision-chosen">Chosen: Token-Based Mapping</div>
+      <div class="decision-over">Over: direct FD number mapping</div>
+      <p style="font-size:0.9em; margin-top:0.3em;">
+        Tokens decouple old and new kernel FD number spaces;
+        PRESERVE_FD returns a token, RETRIEVE_FD accepts it.
+      </p>
+      <p style="font-size:0.75em; color:var(--text-muted);">
+        Ref: include/uapi/linux/liveupdate.h (LIVEUPDATE_SESSION_PRESERVE_FD,
+        LIVEUPDATE_SESSION_RETRIEVE_FD)
+      </p>
+    </div>
+  </div>
+  <p class="slide-note">
+    All design rationale sourced from in-tree Kconfig, headers, and code comments.
+    Where commit-message rationale is absent: "rationale not recorded in-tree."
+  </p>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     SLIDE 6 — State Machine Evolution
+     ════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>State Machine &mdash; Session Lifecycle</h2>
+  <div class="mermaid">
+  stateDiagram-v2
+    [*] --> Normal : Boot / KHO init
+    Normal --> SessionActive : CREATE_SESSION ioctl
+    SessionActive --> FDsPreserved : PRESERVE_FD ioctl(s)
+    FDsPreserved --> Frozen : liveupdate_reboot() freeze callbacks
+    Frozen --> Serialized : kho_finalize() FDT written
+    Serialized --> KexecTransition : kexec -e
+    KexecTransition --> NewKernelBoot : New kernel boots
+    NewKernelBoot --> Deserialized : luo_session_deserialize()
+    Deserialized --> Retrieved : RETRIEVE_SESSION + RETRIEVE_FD
+    Retrieved --> Finished : SESSION_FINISH ioctl
+    Finished --> Normal : Resources released
+    FDsPreserved --> Normal : Abort (unpreserve)
+    Frozen --> FDsPreserved : Freeze failure (unfreeze)
+  </div>
+  <p class="slide-note">
+    The state machine is implicit (session lifecycle flow), not an explicit enum.
+    States are derived from operational flow in luo_core.c, luo_session.c, and luo_file.c.<br>
+    Key commit: 9e2fd062fa17 (2025-11-25) — LUO core introduced by Pasha Tatashin.
+  </p>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     SLIDE 7 — Integration Maturity Matrix
+     ════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Integration Maturity Matrix</h2>
+  <table class="matrix">
+    <thead>
+      <tr>
+        <th>Integration Point</th>
+        <th>Status</th>
+        <th>Evidence</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Memory Management (memfd)</td>
+        <td><span class="badge badge-implemented">Implemented</span></td>
+        <td>mm/memfd_luo.c (523 lines), registered "memfd-v1" handler with full callback set</td>
+      </tr>
+      <tr>
+        <td>Memory Management (memblock)</td>
+        <td><span class="badge badge-implemented">Implemented</span></td>
+        <td>mm/memblock.c — 16+ KHO-aware functions for scratch memory management</td>
+      </tr>
+      <tr>
+        <td>x86 Architecture</td>
+        <td><span class="badge badge-implemented">Implemented</span></td>
+        <td>6 files in arch/x86/ — KASLR avoidance, E820 integration, kexec data attachment</td>
+      </tr>
+      <tr>
+        <td>EFI Firmware</td>
+        <td><span class="badge badge-implemented">Implemented</span></td>
+        <td>drivers/firmware/efi/efi-init.c — KHO-aware memblock discovery on EFI boot</td>
+      </tr>
+      <tr>
+        <td>KVM (primary use case)</td>
+        <td><span class="badge badge-absent">Absent</span></td>
+        <td>No KVM-specific live update code; integration planned via generic file handler</td>
+      </tr>
+      <tr>
+        <td>Device Drivers (VFIO, IOMMU)</td>
+        <td><span class="badge badge-absent">Absent</span></td>
+        <td>No driver-specific handlers beyond memfd exist in current HEAD</td>
+      </tr>
+      <tr>
+        <td>Networking</td>
+        <td><span class="badge badge-absent">Absent</span></td>
+        <td>No networking subsystem integration in Live Update manifest files</td>
+      </tr>
+      <tr>
+        <td>Filesystem</td>
+        <td><span class="badge badge-absent">Absent</span></td>
+        <td>No filesystem handler (XFS "live update" is unrelated scrub feature)</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="slide-note">
+    4 of 8 integration points implemented. KVM — the primary target use case — has no code yet.<br>
+    Evidence: grep -r across kernel/liveupdate/, mm/, arch/x86/, drivers/firmware/efi/
+  </p>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     SLIDE 8 — Risk Assessment
+     ════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Risk Assessment</h2>
+  <table class="risk-table">
+    <thead>
+      <tr>
+        <th>Severity</th>
+        <th>Risk</th>
+        <th>Evidence</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="risk-high">&#x1F534; HIGH</span></td>
+        <td>KVM integration absent — primary use case (VM-transparent kernel updates) has no code</td>
+        <td>No KVM-specific files in Live Update manifest; luo_core.c DOC comment lists kvm as target</td>
+      </tr>
+      <tr>
+        <td><span class="risk-high">&#x1F534; HIGH</span></td>
+        <td>NUMA node hot-plug not implemented for KHO scratch regions</td>
+        <td>kexec_handover.c:657 — <code>/* FIXME: deal with node hot-plug/remove */</code></td>
+      </tr>
+      <tr>
+        <td><span class="risk-medium">&#x1F7E1; MEDIUM</span></td>
+        <td>Single architecture support — only x86 has ARCH_SUPPORTS_KEXEC_HANDOVER</td>
+        <td>kernel/liveupdate/Kconfig:8 — depends on ARCH_SUPPORTS_KEXEC_HANDOVER</td>
+      </tr>
+      <tr>
+        <td><span class="risk-medium">&#x1F7E1; MEDIUM</span></td>
+        <td>Intentional resource leak on partial deserialization failure</td>
+        <td>luo_session.c, luo_file.c — explicit comments: recovery is full reboot (by&nbsp;design)</td>
+      </tr>
+      <tr>
+        <td><span class="risk-medium">&#x1F7E1; MEDIUM</span></td>
+        <td>Single file handler — only memfd handler exists; no KVM/VFIO/iommufd handlers</td>
+        <td>mm/memfd_luo.c is the sole handler registered via liveupdate_register_file_handler()</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="slide-note">
+    2 HIGH risks relate to the primary use case (KVM) and known FIXME in current HEAD.<br>
+    3 MEDIUM risks are architectural constraints that may limit adoption outside x86 hypervisor hosts.
+  </p>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     SLIDE 9 — Onboarding Path
+     ════════════════════════════════════════════════════════════════════ -->
+<section>
+  <h2>Onboarding Path</h2>
+  <div class="mermaid">
+  graph LR
+    A["&#x1F4E5; Clone Repository<br/>(full history)"]:::step --> B["&#x2699;&#xFE0F; Install Prerequisites<br/>git, bash, python3"]:::step
+    B --> C["&#x1F4C4; Run manifest.sh<br/>(Directive 1)"]:::step
+    C --> D["&#x1F464; Run authorship.sh<br/>(Directive 2)"]:::step
+    D --> E["&#x1F50D; Run analyze.py<br/>(Directives 1-8)"]:::step
+    E --> F["&#x1F4D6; Review archaeology.md"]:::gold
+    classDef step fill:#17a2b8,stroke:#17a2b8,color:#fff
+    classDef gold fill:#FFD700,stroke:#FFD700,color:#1a1a2e
+  </div>
+  <div style="margin-top:0.6em; font-size:0.65em; text-align:left; padding:0 1em;">
+    <h3 style="margin-bottom:0.3em;">Next Steps for the Team</h3>
+    <ul style="list-style:none; padding:0;">
+      <li>&#x2192; <strong>Reproduce analysis:</strong> See Documentation/liveupdate/onboarding.md for full instructions</li>
+      <li>&#x2192; <strong>KVM integration:</strong> Highest-priority gap — design file handler for KVM guest state</li>
+      <li>&#x2192; <strong>Multi-arch support:</strong> Extend ARCH_SUPPORTS_KEXEC_HANDOVER beyond x86</li>
+      <li>&#x2192; <strong>Resolve FIXME:</strong> NUMA node hot-plug handling at kexec_handover.c:657</li>
+      <li>&#x2192; <strong>Driver handlers:</strong> VFIO, IOMMU, and networking subsystem integration</li>
+    </ul>
+  </div>
+  <p class="slide-note">
+    Full reproduction from a clean machine requires only git, bash (&ge;4.2), and python3 (&ge;3.6).<br>
+    See Documentation/liveupdate/onboarding.md and Documentation/liveupdate/observability.md for details.
+  </p>
+</section>
+
+</div><!-- .slides -->
+</div><!-- .reveal -->
+
+<!-- reveal.js 4.x from CDN -->
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@4/dist/reveal.js"></script>
+<!-- Mermaid.js for diagram rendering -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+<script>
+  // Initialize Mermaid with dark theme for reveal.js compatibility
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'dark',
+    themeVariables: {
+      primaryColor: '#FFD700',
+      primaryTextColor: '#fff',
+      primaryBorderColor: '#FFD700',
+      lineColor: '#adb5bd',
+      secondaryColor: '#17a2b8',
+      tertiaryColor: '#1a1a2e'
+    },
+    flowchart: { useMaxWidth: true, htmlLabels: true },
+    gantt: { useMaxWidth: true },
+    securityLevel: 'loose'
+  });
+
+  // Initialize reveal.js
+  Reveal.initialize({
+    hash: true,
+    plugins: [],
+    width: 1200,
+    height: 700,
+    margin: 0.04,
+    transition: 'slide',
+    backgroundTransition: 'fade'
+  }).then(function() {
+    // Render all Mermaid diagrams after Reveal is ready
+    mermaid.run({ querySelector: '.mermaid' });
+  });
+</script>
+
+</body>
+</html>
