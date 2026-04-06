@@ -359,8 +359,9 @@ echo "---"
 echo -e "date\tmilestone_name\tcommit_hash\tauthor\tdescription"
 
 milestone_count=0
+declare -a milestone_rows=()
 
-# Helper: emit a milestone row and increment counter.
+# Helper: buffer a milestone row for later sorted output and increment counter.
 emit_milestone() {
 	local mdate="$1"
 	local mname="$2"
@@ -372,7 +373,7 @@ emit_milestone() {
 		return 0
 	fi
 
-	echo -e "${mdate}\t${mname}\t${mhash}\t${mauthor}\t${mdesc}"
+	milestone_rows+=("${mdate}${TAB}${mname}${TAB}${mhash}${TAB}${mauthor}${TAB}${mdesc}")
 	milestone_count=$((milestone_count + 1))
 	log "INFO" "Milestone $milestone_count: $mname ($mdate) by $mauthor [$mhash]"
 }
@@ -537,6 +538,15 @@ line="$(git log --all --format="%aI%x09%H%x09%an%x09%s" \
 if [[ -n "$line" ]]; then
 	parse_milestone_line "$line"
 	emit_milestone "$m_date" "Stabilization_Fixes" "$m_hash" "$m_author" "$m_desc"
+fi
+
+# ---------------------------------------------------------------------------
+# Output all buffered milestones sorted by date (chronological ascending).
+# This ensures the "Milestones (chronological order)" header contract is met
+# regardless of the order in which individual milestone git-log queries run.
+# ---------------------------------------------------------------------------
+if (( ${#milestone_rows[@]} > 0 )); then
+	printf '%s\n' "${milestone_rows[@]}" | sort -t"${TAB}" -k1,1
 fi
 
 # ===========================================================================
