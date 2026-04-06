@@ -10,6 +10,7 @@ metadata:
   labels:
     blitzy.com/language: c
   annotations:
+    backstage.io/techdocs-ref: dir:.
     github.com/project-slug: Blitzy-Sandbox/blitzy-linux
     backstage.io/source-location: url:https://github.com/Blitzy-Sandbox/blitzy-linux/tree/master/
   links:
