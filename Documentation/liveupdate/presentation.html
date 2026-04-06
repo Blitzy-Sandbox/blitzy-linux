@@ -323,23 +323,23 @@
     </tr>
     <tr>
       <td style="color:var(--kernel-gold);">Google LLC / Soleen</td>
-      <td>Pasha Tatashin (26 commits), Pratyush Yadav, Changyuan Lyu, Jason Miu</td>
+      <td>Pasha Tatashin (33 commits), Pratyush Yadav, Changyuan Lyu, Jason Miu</td>
       <td>LUO architect, sessions, file handlers, memfd</td>
     </tr>
     <tr>
       <td style="color:var(--kernel-gold);">Microsoft Corporation</td>
-      <td>Mike Rapoport (4 commits)</td>
+      <td>Mike Rapoport (17 commits)</td>
       <td>KHO infrastructure, memory preservation API</td>
     </tr>
     <tr>
       <td style="color:var(--kernel-gold);">Amazon</td>
-      <td>Alexander Graf (2 commits, original copyright 2023)</td>
+      <td>Alexander Graf (7 commits, original copyright 2023)</td>
       <td>Original KHO concept and generation helpers</td>
     </tr>
   </table>
   <p class="slide-note">
     Status: <strong style="color:var(--status-yellow);">In Development</strong> &mdash; not yet a stable/complete feature.<br>
-    Evidence: kernel/liveupdate/Kconfig, git&nbsp;log&nbsp;--all&nbsp;--&nbsp;kernel/liveupdate/
+    Evidence: Per-author counts reflect the full Live Update manifest scope (exclusive paths + shared paths with keyword filtering); see tools/liveupdate/archaeology/authorship.sh
   </p>
 </section>
 
@@ -402,7 +402,7 @@
     classDef active fill:#ffc107,stroke:#ffc107,color:#1a1a2e
   </div>
   <p class="slide-note">
-    Primary architect: Pasha Tatashin (Google/Soleen) — 26 commits. Original KHO concept: Alexander Graf (Amazon, copyright 2023).<br>
+    Primary architect: Pasha Tatashin (Google/Soleen) — 33 commits across manifest scope. Original KHO concept: Alexander Graf (Amazon, copyright 2023).<br>
     Evidence: git log --all --reverse -- include/linux/kexec_handover.h (first commit 3dc92c311498, 2025-05-09);<br>
     git log --all --reverse -- kernel/liveupdate/ (first commit 48a1b2321d76, 2025-11-01)
   </p>

@@ -143,7 +143,7 @@ The Live Update subsystem is the product of multi-vendor collaboration across Go
 | Arnd Bergmann | 1 | 2025-12-04 to 2025-12-04 | KHO |
 | Andrew Morton | 1 | 2026-01-21 to 2026-01-21 | KHO |
 
-*Figure 2: Author Contribution Distribution (kernel/liveupdate/ directory)*
+*Figure 2: Author Contribution Distribution (Live Update Manifest Files — Exclusive + Shared Paths)*
 
 ```mermaid
 pie title Commit Distribution by Author
@@ -418,7 +418,7 @@ graph LR
     LUO["Live Update<br/>Orchestrator"]
     LUO -->|implemented| Memfd["Memfd<br/>mm/memfd_luo.c"]
     LUO -->|implemented| Memblock["Memblock<br/>mm/memblock.c"]
-    LUO -->|implemented| x86["x86 Arch<br/>6 files"]
+    LUO -->|implemented| x86["x86 Arch<br/>7 files"]
     LUO -->|implemented| EFI["EFI Firmware<br/>efi-init.c"]
     LUO -.->|absent| KVM["KVM<br/>(not yet implemented)"]
     LUO -.->|absent| Drivers["Device Drivers<br/>(not yet implemented)"]
@@ -438,7 +438,7 @@ graph LR
 ```
 LIVEUPDATE
 ├── KEXEC_HANDOVER
-│   ├── ARCH_SUPPORTS_KEXEC_HANDOVER (x86 only)
+│   ├── ARCH_SUPPORTS_KEXEC_HANDOVER (arm64, x86)
 │   ├── ARCH_SUPPORTS_KEXEC_FILE
 │   ├── !DEFERRED_STRUCT_PAGE_INIT
 │   ├── [select] MEMBLOCK_KHO_SCRATCH
@@ -456,7 +456,7 @@ The following questions remain open based on the archaeological analysis of the 
 
 1. **KVM Integration Timeline** — KVM is cited as the primary use case (file: kernel/liveupdate/luo_core.c:34) but no KVM-specific handler code exists.  When will the first KVM file handler be submitted?
 
-2. **Multi-Architecture Support** — Only x86 defines `ARCH_SUPPORTS_KEXEC_HANDOVER`.  Will arm64 or other architectures gain KHO support?
+2. **Multi-Architecture Support** — Both x86 (arch/x86/Kconfig:2020) and arm64 (arch/arm64/Kconfig:1621) define `ARCH_SUPPORTS_KEXEC_HANDOVER`, but arm64 lacks boot integration code (no arch/arm64/ KHO-specific source files exist).  Will arm64 gain full boot-level KHO integration, and will other architectures follow?
 
 3. **NUMA Hot-Plug Handling** — The sole FIXME in the subsystem at `kexec_handover.c:657` ("FIXME: deal with node hot-plug/remove") indicates NUMA node hot-plug is unhandled.  What is the plan to address this? (file: kernel/liveupdate/kexec_handover.c:657)
 
