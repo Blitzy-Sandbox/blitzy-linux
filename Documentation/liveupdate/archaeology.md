@@ -107,7 +107,7 @@ graph TD
     subgraph Integrations["Subsystem Integrations"]
         MEMFD["mm/memfd_luo.c<br/>(523 lines)"]
         MEMBLOCK["mm/memblock.c"]
-        X86["arch/x86/<br/>(6 files)"]
+        X86["arch/x86/<br/>(7 files)"]
         EFI["drivers/firmware/efi/<br/>efi-init.c"]
     end
     LUO_CORE --> LUO_SESSION
@@ -416,19 +416,19 @@ has been stable since its introduction in `9e2fd062fa17`.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Normal : Boot / liveupdate_ioctl_init()
+    [*] --> Normal : Boot / liveupdate_ioctl_init
     Normal --> SessionActive : CREATE_SESSION ioctl
-    SessionActive --> FDsPreserved : PRESERVE_FD ioctl(s)
-    FDsPreserved --> Frozen : liveupdate_reboot() calls luo_file_freeze()
-    Frozen --> Serialized : luo_session_serialize() + kho_finalize()
+    SessionActive --> FDsPreserved : PRESERVE_FD ioctls
+    FDsPreserved --> Frozen : liveupdate_reboot triggers freeze callbacks
+    Frozen --> Serialized : luo_session_serialize + kho_finalize
     Serialized --> KexecTransition : kexec -e
     KexecTransition --> NewKernelBoot : New kernel boots with KHO data
-    NewKernelBoot --> Deserialized : luo_session_deserialize()
+    NewKernelBoot --> Deserialized : luo_session_deserialize
     Deserialized --> Retrieved : RETRIEVE_SESSION + RETRIEVE_FD ioctls
     Retrieved --> Finished : SESSION_FINISH ioctl
     Finished --> Normal : Resources released
-    FDsPreserved --> Normal : Abort (unpreserve)
-    Frozen --> FDsPreserved : Freeze failure (__luo_file_unfreeze)
+    FDsPreserved --> Normal : Abort / unpreserve
+    Frozen --> FDsPreserved : Freeze failure / unfreeze rollback
 ```
 
 **Figure 3: Live Update Session Lifecycle State Machine (Current HEAD).** The
@@ -496,10 +496,13 @@ Three major components are identified as absent or deferred:
    "vfio, memfd, or iommufd" as target file types, but only memfd is
    implemented. Classification: **deferred**.
 
-3. **Multi-Architecture Support** (deferred):
-   `ARCH_SUPPORTS_KEXEC_HANDOVER` is only defined for x86
-   (`kernel/liveupdate/Kconfig:8`). No ARM64, RISC-V, or other architecture
-   support exists. Classification: **deferred**.
+3. **Multi-Architecture Support** (partial):
+   `ARCH_SUPPORTS_KEXEC_HANDOVER` is defined for x86
+   (`arch/x86/Kconfig:2020`) and arm64 (`arch/arm64/Kconfig:1621`,
+   `def_bool y`), though arm64 lacks boot integration code — no files under
+   `arch/arm64/` reference KHO or kexec_handover. RISC-V and other
+   architectures have no support. Classification: **deferred** for full
+   multi-architecture support beyond x86.
 
 ---
 
@@ -561,7 +564,7 @@ deferred work markers beyond the single FIXME.
 |---|---|---|---|
 | **Memfd** | ✅ Implemented | `mm/memfd_luo.c` (523 lines) | Handler "memfd-v1" registered at `memfd_luo.c:507-512` with full callback set |
 | **Memory Management (memblock)** | ✅ Implemented | `mm/memblock.c` | `memblock_mark_kho_scratch()`, `memmap_init_kho_scratch_pages()`, `prepare_kho_fdt()` |
-| **x86 Architecture** | ✅ Implemented | `arch/x86/` (6 files) | KASLR avoidance (`kaslr.c`), E820 (`e820.c`), setup data (`setup.c`), kexec (`kexec-bzimage64.c`), realmode (`init.c`) |
+| **x86 Architecture** | ✅ Implemented | `arch/x86/` (7 files) | KASLR avoidance (`kaslr.c`), E820 (`e820.c`), setup data (`setup.c`, `setup.h`, `setup_data.h`), kexec (`kexec-bzimage64.c`), realmode (`init.c`) |
 | **EFI Firmware** | ✅ Implemented | `drivers/firmware/efi/efi-init.c` | `is_kho_boot()` check during memblock discovery |
 | **KVM** | ❌ Absent | No KVM-specific code | `luo_core.c:34` mentions "kvm" as future subsystem |
 | **Device Drivers (VFIO/iommufd)** | ❌ Absent | No driver-specific handlers | `luo_file.c:13` mentions as target types |
@@ -575,7 +578,7 @@ Source: `kernel/liveupdate/Kconfig:1-91`
 ```
 LIVEUPDATE (line 54)
 ├── depends on: KEXEC_HANDOVER (line 56)
-│   ├── depends on: ARCH_SUPPORTS_KEXEC_HANDOVER (x86 only)
+│   ├── depends on: ARCH_SUPPORTS_KEXEC_HANDOVER (x86, arm64)
 │   ├── depends on: ARCH_SUPPORTS_KEXEC_FILE
 │   ├── depends on: !DEFERRED_STRUCT_PAGE_INIT
 │   ├── select: MEMBLOCK_KHO_SCRATCH
@@ -595,7 +598,7 @@ graph LR
     subgraph Implemented["Implemented (4 integration points)"]
         MEMFD["Memfd<br/>mm/memfd_luo.c<br/>523 lines, full callbacks"]
         MEMBLOCK["Memblock<br/>mm/memblock.c<br/>16+ KHO functions"]
-        X86["x86 Architecture<br/>arch/x86/ (6 files)<br/>KASLR, E820, setup"]
+        X86["x86 Architecture<br/>arch/x86/ (7 files)<br/>KASLR, E820, setup"]
         EFI["EFI Firmware<br/>drivers/firmware/efi<br/>is_kho_boot() gate"]
     end
     subgraph Absent["Absent (4 integration points)"]
@@ -626,10 +629,11 @@ analysis. Each is grounded in specific evidence gaps or absent functionality.
    indicates a timeline.
 
 2. **What is the plan for multi-architecture support?**
-   `ARCH_SUPPORTS_KEXEC_HANDOVER` is currently only defined for x86
-   (`kernel/liveupdate/Kconfig:8`). The architecture-specific integration
-   requires 6+ files (`arch/x86/`). No evidence of ARM64 or RISC-V porting
-   efforts exists in-tree.
+   `ARCH_SUPPORTS_KEXEC_HANDOVER` is defined for x86
+   (`arch/x86/Kconfig:2020`) and arm64 (`arch/arm64/Kconfig:1621`), but
+   arm64 lacks boot integration code. The x86 architecture-specific
+   integration requires 7 files (`arch/x86/`). No evidence of arm64 boot
+   integration or RISC-V porting efforts exists in-tree.
 
 3. **How will NUMA node hot-plug be handled?** The single FIXME at
    `kexec_handover.c:657` ("deal with node hot-plug/remove") indicates this is

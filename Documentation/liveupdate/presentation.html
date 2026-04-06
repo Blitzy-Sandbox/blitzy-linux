@@ -328,7 +328,7 @@
     </tr>
     <tr>
       <td style="color:var(--kernel-gold);">Microsoft Corporation</td>
-      <td>Mike Rapoport (8 commits)</td>
+      <td>Mike Rapoport (4 commits)</td>
       <td>KHO infrastructure, memory preservation API</td>
     </tr>
     <tr>
@@ -364,7 +364,7 @@
     subgraph INT["Integrations"]
       MEMFD["mm/memfd_luo.c<br/>(523 lines)"]
       MEMBLOCK["mm/memblock.c"]
-      X86["arch/x86/<br/>(6 files)"]
+      X86["arch/x86/<br/>(7 files)"]
       EFI["drivers/firmware/efi"]
     end
     LUO_CORE --> LUO_SESSION
@@ -390,22 +390,16 @@
 <section>
   <h2>Authorship &amp; Development Timeline</h2>
   <div class="mermaid">
-  gantt
-    title Live Update Subsystem Development Timeline
-    dateFormat YYYY-MM-DD
-    axisFormat %b %Y
-    section KHO Foundation
-    KHO Generation Helpers — Alexander Graf         :done, kho1, 2025-05-09, 1d
-    KHO Parsing + Memory Preservation — Rapoport    :done, kho2, 2025-05-09, 1d
-    section Evolution
-    is_kho_boot introduced — Petrongonas            :done, evo1, 2025-08-21, 1d
-    vmalloc preservation + page API rework          :done, evo2, 2025-09-21, 1d
-    section LUO Integration
-    KHO moved to kernel/liveupdate — Tatashin       :done, luo1, 2025-11-01, 1d
-    LUO core, sessions, files, FLB — Tatashin       :done, luo2, 2025-11-25, 14d
-    Memfd preservation handler — Yadav              :done, luo3, 2025-12-01, 30d
-    section Current
-    Bug fixes, cleanups to HEAD                     :active, cur1, 2026-01-01, 2026-02-16
+  graph LR
+    M1["May 2025<br/>KHO Foundation<br/>Graf, Rapoport"]:::done
+    M2["Aug 2025<br/>is_kho_boot<br/>Petrongonas"]:::done
+    M3["Sep 2025<br/>API Rework<br/>Rapoport"]:::done
+    M4["Nov 2025<br/>LUO Framework<br/>Tatashin"]:::done
+    M5["Dec 2025<br/>Memfd, FLB<br/>Yadav, Tatashin"]:::done
+    M6["Feb 2026<br/>Stabilization<br/>Current HEAD"]:::active
+    M1 --> M2 --> M3 --> M4 --> M5 --> M6
+    classDef done fill:#28a745,stroke:#28a745,color:#fff
+    classDef active fill:#ffc107,stroke:#ffc107,color:#1a1a2e
   </div>
   <p class="slide-note">
     Primary architect: Pasha Tatashin (Google/Soleen) — 26 commits. Original KHO concept: Alexander Graf (Amazon, copyright 2023).<br>
@@ -486,17 +480,17 @@
   stateDiagram-v2
     [*] --> Normal : Boot / KHO init
     Normal --> SessionActive : CREATE_SESSION ioctl
-    SessionActive --> FDsPreserved : PRESERVE_FD ioctl(s)
-    FDsPreserved --> Frozen : liveupdate_reboot() freeze callbacks
-    Frozen --> Serialized : kho_finalize() FDT written
+    SessionActive --> FDsPreserved : PRESERVE_FD ioctls
+    FDsPreserved --> Frozen : liveupdate_reboot freeze callbacks
+    Frozen --> Serialized : kho_finalize FDT written
     Serialized --> KexecTransition : kexec -e
     KexecTransition --> NewKernelBoot : New kernel boots
-    NewKernelBoot --> Deserialized : luo_session_deserialize()
+    NewKernelBoot --> Deserialized : luo_session_deserialize
     Deserialized --> Retrieved : RETRIEVE_SESSION + RETRIEVE_FD
     Retrieved --> Finished : SESSION_FINISH ioctl
     Finished --> Normal : Resources released
-    FDsPreserved --> Normal : Abort (unpreserve)
-    Frozen --> FDsPreserved : Freeze failure (unfreeze)
+    FDsPreserved --> Normal : Abort / unpreserve
+    Frozen --> FDsPreserved : Freeze failure / unfreeze
   </div>
   <p class="slide-note">
     The state machine is implicit (session lifecycle flow), not an explicit enum.
@@ -532,7 +526,7 @@
       <tr>
         <td>x86 Architecture</td>
         <td><span class="badge badge-implemented">Implemented</span></td>
-        <td>6 files in arch/x86/ — KASLR avoidance, E820 integration, kexec data attachment</td>
+        <td>7 files in arch/x86/ — KASLR avoidance, E820 integration, setup headers, kexec data attachment</td>
       </tr>
       <tr>
         <td>EFI Firmware</td>
@@ -593,8 +587,8 @@
       </tr>
       <tr>
         <td><span class="risk-medium">&#x1F7E1; MEDIUM</span></td>
-        <td>Single architecture support — only x86 has ARCH_SUPPORTS_KEXEC_HANDOVER</td>
-        <td>kernel/liveupdate/Kconfig:8 — depends on ARCH_SUPPORTS_KEXEC_HANDOVER</td>
+        <td>Limited architecture support — x86 has full integration; arm64 has Kconfig gate but no boot integration code</td>
+        <td>arch/x86/Kconfig:2020, arch/arm64/Kconfig:1621 — arm64 defines the symbol but lacks arch/ boot files</td>
       </tr>
       <tr>
         <td><span class="risk-medium">&#x1F7E1; MEDIUM</span></td>
@@ -610,7 +604,7 @@
   </table>
   <p class="slide-note">
     2 HIGH risks relate to the primary use case (KVM) and known FIXME in current HEAD.<br>
-    3 MEDIUM risks are architectural constraints that may limit adoption outside x86 hypervisor hosts.
+    3 MEDIUM risks are architectural constraints that may limit adoption beyond x86 hypervisor hosts.
   </p>
 </section>
 
@@ -621,11 +615,13 @@
   <h2>Onboarding Path</h2>
   <div class="mermaid">
   graph LR
-    A["&#x1F4E5; Clone Repository<br/>(full history)"]:::step --> B["&#x2699;&#xFE0F; Install Prerequisites<br/>git, bash, python3"]:::step
-    B --> C["&#x1F4C4; Run manifest.sh<br/>(Directive 1)"]:::step
-    C --> D["&#x1F464; Run authorship.sh<br/>(Directive 2)"]:::step
-    D --> E["&#x1F50D; Run analyze.py<br/>(Directives 1-8)"]:::step
-    E --> F["&#x1F4D6; Review archaeology.md"]:::gold
+    A["Clone Repository<br/>full history required"]:::step
+    B["Install Prerequisites<br/>git, bash, python3"]:::step
+    C["Run manifest.sh<br/>Directive 1"]:::step
+    D["Run authorship.sh<br/>Directive 2"]:::step
+    E["Run analyze.py<br/>Directives 1-8"]:::step
+    F["Review archaeology.md"]:::gold
+    A --> B --> C --> D --> E --> F
     classDef step fill:#17a2b8,stroke:#17a2b8,color:#fff
     classDef gold fill:#FFD700,stroke:#FFD700,color:#1a1a2e
   </div>
@@ -634,7 +630,7 @@
     <ul style="list-style:none; padding:0;">
       <li>&#x2192; <strong>Reproduce analysis:</strong> See Documentation/liveupdate/onboarding.md for full instructions</li>
       <li>&#x2192; <strong>KVM integration:</strong> Highest-priority gap — design file handler for KVM guest state</li>
-      <li>&#x2192; <strong>Multi-arch support:</strong> Extend ARCH_SUPPORTS_KEXEC_HANDOVER beyond x86</li>
+      <li>&#x2192; <strong>Multi-arch support:</strong> Add arm64 boot integration code; extend to RISC-V</li>
       <li>&#x2192; <strong>Resolve FIXME:</strong> NUMA node hot-plug handling at kexec_handover.c:657</li>
       <li>&#x2192; <strong>Driver handlers:</strong> VFIO, IOMMU, and networking subsystem integration</li>
     </ul>
@@ -654,7 +650,10 @@
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 
 <script>
-  // Initialize Mermaid with dark theme for reveal.js compatibility
+  // Initialize Mermaid with dark theme for reveal.js compatibility.
+  // useMaxWidth is set to false to prevent Mermaid from querying container
+  // width at render time — reveal.js hides non-active slides which gives
+  // their containers zero width, producing broken 16×16 SVGs.
   mermaid.initialize({
     startOnLoad: false,
     theme: 'dark',
@@ -666,12 +665,11 @@
       secondaryColor: '#17a2b8',
       tertiaryColor: '#1a1a2e'
     },
-    flowchart: { useMaxWidth: true, htmlLabels: true },
-    gantt: { useMaxWidth: true },
+    flowchart: { useMaxWidth: false, htmlLabels: true },
     securityLevel: 'loose'
   });
 
-  // Initialize reveal.js
+  // Initialize reveal.js first
   Reveal.initialize({
     hash: true,
     plugins: [],
@@ -681,8 +679,30 @@
     transition: 'slide',
     backgroundTransition: 'fade'
   }).then(function() {
-    // Render all Mermaid diagrams after Reveal is ready
-    mermaid.run({ querySelector: '.mermaid' });
+    // Force all slide sections visible so Mermaid can measure SVG
+    // bounding boxes correctly.  Without this, hidden slides have
+    // zero-width containers and Mermaid produces broken 16×16 SVGs.
+    var fixStyle = document.createElement('style');
+    fixStyle.id = 'mermaid-layout-fix';
+    fixStyle.textContent =
+      '.reveal .slides section { visibility: visible !important; ' +
+      'opacity: 1 !important; transform: none !important; ' +
+      'display: block !important; position: relative !important; }';
+    document.head.appendChild(fixStyle);
+
+    return mermaid.run({ querySelector: '.mermaid' });
+  }).then(function() {
+    // Remove the temporary style so reveal.js can manage slides normally
+    var fixStyle = document.getElementById('mermaid-layout-fix');
+    if (fixStyle) fixStyle.remove();
+    // Force reveal.js to recalculate layout after Mermaid SVGs are inserted
+    Reveal.layout();
+    Reveal.slide(0);
+    // Constrain oversized SVGs to fit within slide area
+    document.querySelectorAll('.mermaid svg').forEach(function(svg) {
+      svg.style.maxWidth = '100%';
+      svg.style.height = 'auto';
+    });
   });
 </script>
 
