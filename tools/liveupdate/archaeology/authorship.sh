@@ -205,14 +205,14 @@ process_commit() {
 	fi
 
 	# Map files to components using the provided path list
-	local IFS=$'\n'
-	for fpath in $path_list; do
+	# Use while-read loop to avoid unquoted expansion and glob risks
+	while IFS= read -r fpath; do
 		if [[ -n "$fpath" ]]; then
 			local comp
 			comp="$(map_component "$fpath")"
 			add_component "$aname" "$comp"
 		fi
-	done
+	done <<< "$path_list"
 }
 
 # ===========================================================================

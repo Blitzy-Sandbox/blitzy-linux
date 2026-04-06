@@ -15,12 +15,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none';
+                 script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+                 style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+                 img-src 'self' data:;
+                 font-src 'self' https://cdn.jsdelivr.net;">
   <title>Linux Kernel Live Update: Development Archaeology — F-017</title>
 
-  <!-- reveal.js 4.x from CDN -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4/dist/reset.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4/dist/reveal.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4/dist/theme/black.css">
+  <!-- reveal.js 4.6.1 from CDN (pinned version with SRI) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reset.css"
+        integrity="sha384-AJKv9Ui5SfA0VsFksFI9GuA1ztX9Ca3CLP6HGfX4YY/tYSVodC+PUszaQZFIlkuy"
+        crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.css"
+        integrity="sha384-NFDRDnQoPtd7zsTgVN98iodRrlDYYZtFmL4GQJ+SRnPTUeCxwu9lkZNwrtTwcD13"
+        crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/theme/black.css"
+        integrity="sha384-/ZvODhFsGDTGwNNKm3urEF4uoXGBg4+MtyMIHL6Vt56FE20B5x9vIe6fTXzlOR3D"
+        crossorigin="anonymous">
 
   <style>
     /* ── Custom presentation styling ── */
@@ -351,20 +363,34 @@
   <div class="mermaid">
   graph TB
     subgraph LUO["Live Update Orchestrator"]
-      LUO_CORE["luo_core.c<br/>/dev/liveupdate<br/>(452 lines)"]
-      LUO_SESSION["luo_session.c<br/>Named Sessions<br/>(646 lines)"]
-      LUO_FILE["luo_file.c<br/>FD Preservation<br/>(926 lines)"]
-      LUO_FLB["luo_flb.c<br/>File-Lifecycle-Bound<br/>(654 lines)"]
+      LUO_CORE["`luo_core.c
+/dev/liveupdate
+(452 lines)`"]
+      LUO_SESSION["`luo_session.c
+Named Sessions
+(646 lines)`"]
+      LUO_FILE["`luo_file.c
+FD Preservation
+(926 lines)`"]
+      LUO_FLB["`luo_flb.c
+File-Lifecycle-Bound
+(654 lines)`"]
     end
     subgraph KHO["Kexec HandOver"]
-      KHO_CORE["kexec_handover.c<br/>Memory Preservation<br/>(1610 lines)"]
-      KHO_FDT["FDT Serialization<br/>(LIBFDT)"]
-      KHO_SCRATCH["Scratch Regions<br/>(CMA-backed)"]
+      KHO_CORE["`kexec_handover.c
+Memory Preservation
+(1610 lines)`"]
+      KHO_FDT["`FDT Serialization
+(LIBFDT)`"]
+      KHO_SCRATCH["`Scratch Regions
+(CMA-backed)`"]
     end
     subgraph INT["Integrations"]
-      MEMFD["mm/memfd_luo.c<br/>(523 lines)"]
+      MEMFD["`mm/memfd_luo.c
+(523 lines)`"]
       MEMBLOCK["mm/memblock.c"]
-      X86["arch/x86/<br/>(7 files)"]
+      X86["`arch/x86/
+(7 files)`"]
       EFI["drivers/firmware/efi"]
     end
     LUO_CORE --> LUO_SESSION
@@ -391,12 +417,24 @@
   <h2>Authorship &amp; Development Timeline</h2>
   <div class="mermaid">
   graph LR
-    M1["May 2025<br/>KHO Foundation<br/>Graf, Rapoport"]:::done
-    M2["Aug 2025<br/>is_kho_boot<br/>Petrongonas"]:::done
-    M3["Sep 2025<br/>API Rework<br/>Rapoport"]:::done
-    M4["Nov 2025<br/>LUO Framework<br/>Tatashin"]:::done
-    M5["Dec 2025<br/>Memfd, FLB<br/>Yadav, Tatashin"]:::done
-    M6["Feb 2026<br/>Stabilization<br/>Current HEAD"]:::active
+    M1["`May 2025
+KHO Foundation
+Graf, Rapoport`"]:::done
+    M2["`Aug 2025
+is_kho_boot
+Petrongonas`"]:::done
+    M3["`Sep 2025
+API Rework
+Rapoport`"]:::done
+    M4["`Nov 2025
+LUO Framework
+Tatashin`"]:::done
+    M5["`Dec 2025
+Memfd, FLB
+Yadav, Tatashin`"]:::done
+    M6["`Feb 2026
+Stabilization
+Current HEAD`"]:::active
     M1 --> M2 --> M3 --> M4 --> M5 --> M6
     classDef done fill:#28a745,stroke:#28a745,color:#fff
     classDef active fill:#ffc107,stroke:#ffc107,color:#1a1a2e
@@ -615,11 +653,16 @@
   <h2>Onboarding Path</h2>
   <div class="mermaid">
   graph LR
-    A["Clone Repository<br/>full history required"]:::step
-    B["Install Prerequisites<br/>git, bash, python3"]:::step
-    C["Run manifest.sh<br/>Directive 1"]:::step
-    D["Run authorship.sh<br/>Directive 2"]:::step
-    E["Run analyze.py<br/>Directives 1-8"]:::step
+    A["`Clone Repository
+full history required`"]:::step
+    B["`Install Prerequisites
+git, bash, python3`"]:::step
+    C["`Run manifest.sh
+Directive 1`"]:::step
+    D["`Run authorship.sh
+Directive 2`"]:::step
+    E["`Run analyze.py
+Directives 1-8`"]:::step
     F["Review archaeology.md"]:::gold
     A --> B --> C --> D --> E --> F
     classDef step fill:#17a2b8,stroke:#17a2b8,color:#fff
@@ -644,10 +687,14 @@
 </div><!-- .slides -->
 </div><!-- .reveal -->
 
-<!-- reveal.js 4.x from CDN -->
-<script src="https://cdn.jsdelivr.net/npm/reveal.js@4/dist/reveal.js"></script>
-<!-- Mermaid.js for diagram rendering -->
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<!-- reveal.js 4.6.1 from CDN (pinned version with SRI) -->
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.js"
+        integrity="sha384-1BgZRI35wIBSv5NogsksvIdAsgAPqwRFj4SJUH7dDP14i/J8zwleEEcTA1TTHId3"
+        crossorigin="anonymous"></script>
+<!-- Mermaid.js 10.9.5 for diagram rendering (pinned version with SRI) -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.5/dist/mermaid.min.js"
+        integrity="sha384-enVdc7lTHDGtpROV85t9+VqPC2EyyB0hsRD0MrvQnHUsHmTHIz2D8SPP4EnBkstH"
+        crossorigin="anonymous"></script>
 
 <script>
   // Initialize Mermaid with dark theme for reveal.js compatibility.
@@ -665,8 +712,8 @@
       secondaryColor: '#17a2b8',
       tertiaryColor: '#1a1a2e'
     },
-    flowchart: { useMaxWidth: false, htmlLabels: true },
-    securityLevel: 'loose'
+    flowchart: { useMaxWidth: false, htmlLabels: false },
+    securityLevel: 'strict'
   });
 
   // Initialize reveal.js first
