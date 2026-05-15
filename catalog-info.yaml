@@ -2,11 +2,12 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: blitzy-linux
-  description: "Linux kernel Live Update subsystem development archaeology documentation"
+  description: Linux kernel Live Update subsystem development archaeology documentation
   tags:
-    - c
-    - infrastructure
-    - documentation
+  - c
+  - documentation
+  - infrastructure
+  - python
   labels:
     blitzy.com/language: c
   annotations:
@@ -14,14 +15,14 @@ metadata:
     github.com/project-slug: Blitzy-Sandbox/blitzy-linux
     backstage.io/source-location: url:https://github.com/Blitzy-Sandbox/blitzy-linux/tree/master/
   links:
-    - url: https://github.com/Blitzy-Sandbox/blitzy-linux
-      title: GitHub Repository
-    - url: https://github.com/Blitzy-Sandbox/blitzy-linux/pull/1
-      title: "PR #1: Live Update Subsystem Documentation"
-      icon: github
-    - url: https://github.com/Blitzy-Sandbox/blitzy-linux/tree/master/blitzy/documentation
-      title: Blitzy Documentation
-      icon: docs
+  - url: https://github.com/Blitzy-Sandbox/blitzy-linux
+    title: GitHub Repository
+  - url: https://github.com/Blitzy-Sandbox/blitzy-linux/pull/1
+    title: 'PR #1: Live Update Subsystem Documentation'
+    icon: github
+  - url: https://github.com/Blitzy-Sandbox/blitzy-linux/tree/master/blitzy/documentation
+    title: Blitzy Documentation
+    icon: docs
 spec:
   type: library
   lifecycle: experimental
